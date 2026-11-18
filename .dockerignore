@@ -1,0 +1,15 @@
+# 构建上下文忽略项（docker compose build 使用仓库根目录作为上下文）
+.git
+.gitignore
+.env
+.env.*
+node_modules
+**/node_modules
+dist
+**/dist
+logs
+**/logs
+coverage
+**/*.log
+**/*.tsbuildinfo
+.DS_Store

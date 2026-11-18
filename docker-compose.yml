@@ -1,0 +1,103 @@
+# ============================================================
+# 仓库 ERP 一键部署（MySQL 8 + Midway 后端 + Nginx/React 前端）
+#
+# 用法：
+#   docker compose up -d --build      # 首次部署 / 代码更新
+#   docker compose ps                 # 查看状态
+#   docker compose logs -f server     # 看后端日志
+#
+# 对外入口：http://<服务器IP>:8989
+# ============================================================
+
+name: erp
+
+services:
+  mysql:
+    image: mysql:latest
+    container_name: erp-mysql
+    restart: unless-stopped
+    environment:
+      # root 密码；后端也用同一个账号连库（DB_USER=root）
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-GXNNante2026}
+      MYSQL_DATABASE: ${DB_NAME:-erp}
+      TZ: Asia/Shanghai
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_0900_ai_ci
+      - --default-time-zone=+08:00
+      # 表名大小写敏感：与 schema.sql 里的小写表名保持一致
+      - --lower-case-table-names=0
+    volumes:
+      - mysql-data:/var/lib/mysql
+      # 仅在数据目录为空（首次启动）时按文件名顺序自动执行
+      - ./docker/mysql/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 40s
+    networks:
+      - erp-net
+
+  server:
+    build:
+      context: .
+      dockerfile: docker/server.Dockerfile
+    image: erp-server:latest
+    container_name: erp-server
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 7001
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_USER: ${DB_USER:-root}
+      DB_PASS: ${MYSQL_ROOT_PASSWORD:-GXNNante2026}
+      DB_NAME: ${DB_NAME:-erp}
+      JWT_SECRET: ${JWT_SECRET:-erp-jwt-secret-change-me}
+      APP_KEYS: ${APP_KEYS:-erp-dev-keys-change-me}
+      TZ: Asia/Shanghai
+    depends_on:
+      mysql:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:7001/api/ping').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - erp-net
+    # 后端不直接对外，统一走 web 的 /api 代理
+    expose:
+      - "7001"
+
+  web:
+    build:
+      context: .
+      dockerfile: docker/web.Dockerfile
+    image: erp-web:latest
+    container_name: erp-web
+    restart: unless-stopped
+    ports:
+      # 宿主机 WEB_PORT → 容器 80；默认 8989
+      - "${WEB_PORT:-8989}:80"
+    depends_on:
+      server:
+        condition: service_healthy
+    networks:
+      - erp-net
+
+volumes:
+  mysql-data:
+    name: erp-mysql-data
+
+networks:
+  erp-net:
+    name: erp-net
+    driver: bridge

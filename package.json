@@ -1,0 +1,14 @@
+{
+  "name": "erp",
+  "private": true,
+  "version": "0.1.0",
+  "description": "仓库 ERP（Midway 4 + React + MySQL）",
+  "scripts": {
+    "install:all": "npm --prefix server install && npm --prefix web install",
+    "dev:server": "npm --prefix server run dev",
+    "dev:web": "npm --prefix web run dev",
+    "build:server": "npm --prefix server run build",
+    "build:web": "npm --prefix web run build",
+    "test:server": "npm --prefix server test"
+  }
+}

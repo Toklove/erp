@@ -1,0 +1,286 @@
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+}
+
+/* 单据编辑页的表单字段标签 */
+.field-label {
+  font-size: 12px;
+  color: #8c8c8c;
+  margin-bottom: 4px;
+}
+
+/* 单据合计条 */
+.doc-total-bar {
+  margin-top: 16px;
+  padding: 12px 16px;
+  background: #fafafa;
+  border: 1px solid #f0f0f0;
+  border-radius: 6px;
+  text-align: right;
+}
+
+/* 布局骨架 */
+.app-brand {
+  height: 56px;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  letter-spacing: 1px;
+}
+
+.app-header {
+  background: #fff;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  padding-inline: 24px;
+}
+
+.app-content {
+  padding: 24px;
+}
+
+/* ---------------------------------------------------------------
+   移动端（≤768px）：抽屉式导航、单列表单、表格横向滚动、触摸友好
+   --------------------------------------------------------------- */
+@media (max-width: 768px) {
+  .app-header {
+    padding-inline: 8px;
+    height: 48px;
+    line-height: 48px;
+  }
+
+  .app-content {
+    padding: 12px;
+  }
+
+  .app-content .ant-card-body {
+    padding: 12px;
+  }
+
+  /* 合计条在窄屏会挤成一团，改成左对齐自动换行 */
+  .doc-total-bar {
+    text-align: left;
+    padding: 10px 12px;
+  }
+
+  .doc-total-bar .ant-space {
+    display: flex !important;
+    flex-direction: column;
+    gap: 4px !important;
+    width: 100%;
+  }
+
+  /* 表单说明文字换行不溢出 */
+  .field-label {
+    white-space: normal;
+  }
+
+  /* 触摸目标至少 32px，链接式操作按钮给足内边距 */
+  .ant-table-cell .ant-btn-sm {
+    padding-inline: 6px;
+    height: 30px;
+  }
+
+  /* iOS 上 font-size < 16px 的输入框会触发自动放大 */
+  .ant-input,
+  .ant-input-affix-wrapper input,
+  .ant-select-selection-search-input,
+  .ant-input-number-input {
+    font-size: 16px !important;
+  }
+
+  /* 弹窗窄屏占满宽度 */
+  .ant-modal {
+    max-width: calc(100vw - 16px);
+    margin: 8px auto;
+  }
+
+  /* 打印预览在小屏可横向滚动查看，不影响真实打印 */
+  .print-shell {
+    overflow-x: auto;
+    padding: 12px 8px;
+  }
+
+  .print-toolbar {
+    width: auto;
+    padding: 0 8px;
+  }
+}
+
+/* ---------------------------------------------------------------
+   打印（针式连续打印纸 241mm × 140mm，两侧打孔）
+   屏幕上给一个接近真实纸张的白底预览区。
+   --------------------------------------------------------------- */
+.print-shell {
+  background: #f0f2f5;
+  min-height: 100vh;
+  padding: 24px 0;
+}
+
+.print-toolbar {
+  width: 225mm;
+  margin: 0 auto 16px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.print-sheet {
+  width: 225mm;
+  min-height: 130mm;
+  margin: 0 auto;
+  background: #fff;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.12);
+  padding: 6mm 8mm;
+  box-sizing: border-box;
+  color: #000;
+  font-family: 'SimSun', '宋体', 'Songti SC', serif;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.print-title {
+  text-align: center;
+  font-size: 21px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  padding-bottom: 4px;
+}
+
+.print-title-rule {
+  border-top: 2px solid #000;
+  border-bottom: 1px solid #000;
+  height: 2px;
+  margin-bottom: 6px;
+}
+
+.print-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+
+.print-meta-col {
+  flex: 1;
+}
+
+.print-meta-row {
+  display: flex;
+  align-items: baseline;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.7;
+}
+
+.print-meta-label {
+  flex: none;
+  color: #000;
+}
+
+.print-meta-value {
+  flex: 1;
+  min-width: 0;
+  border-bottom: 1px dotted #666;
+  padding-left: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.print-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  margin-top: 2px;
+}
+
+.print-table th,
+.print-table td {
+  border: 1px solid #000;
+  padding: 2px 3px;
+  font-size: 12px;
+  line-height: 1.45;
+  word-break: break-all;
+}
+
+.print-table th {
+  font-weight: 700;
+  text-align: center;
+  background: #fff;
+}
+
+.print-table td.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.print-table td.center {
+  text-align: center;
+}
+
+.print-foot {
+  margin-top: 4px;
+}
+
+.print-foot-line {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  line-height: 1.8;
+}
+
+.print-sign {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 10px;
+  line-height: 2;
+}
+
+.print-sign-item {
+  flex: 1;
+  white-space: nowrap;
+}
+
+@media print {
+  .print-toolbar {
+    display: none !important;
+  }
+
+  body,
+  html {
+    background: #fff !important;
+    height: auto !important;
+  }
+
+  .print-shell {
+    background: #fff;
+    padding: 0;
+    min-height: auto;
+  }
+
+  .print-sheet {
+    width: auto;
+    min-height: auto;
+    margin: 0;
+    box-shadow: none;
+    padding: 0;
+  }
+
+  @page {
+    size: 241mm 140mm;
+    margin: 5mm 8mm;
+  }
+}
