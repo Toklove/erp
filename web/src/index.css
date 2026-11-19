@@ -148,6 +148,10 @@ body {
   font-family: 'SimSun', '宋体', 'Songti SC', serif;
   font-size: 12px;
   line-height: 1.5;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  /* position: relative; */
 }
 
 .print-title {
@@ -232,6 +236,16 @@ body {
 
 .print-foot {
   margin-top: 4px;
+  flex: 1;
+  min-height: 100%;
+  margin-bottom: 4px;
+  position: relative;
+}
+
+.print-foot-content {
+  position: absolute;
+  bottom: 6px;
+  width: 100%;
 }
 
 .print-foot-line {
@@ -277,6 +291,7 @@ body {
     margin: 0;
     box-shadow: none;
     padding: 0;
+    display: flex;
   }
 
   @page {

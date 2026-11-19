@@ -142,7 +142,7 @@ export default function DocListPage() {
       title: '操作',
       key: 'op',
       width: 300,
-      fixed: 'right',
+      // fixed: 'right',
       render: (_, r) => {
         const editable = r.status === 0 || r.status === 1;
         return (
@@ -231,7 +231,7 @@ export default function DocListPage() {
         <Select
           allowClear
           placeholder="单据类型"
-          style={{ width: isMobile ? 'calc(50% - 4px)' : 140 }}
+          style={{ width: isMobile ? 'calc(131% - 4px)' : 140 }}
           value={docType}
           onChange={v => {
             setDocType(v);
@@ -241,8 +241,8 @@ export default function DocListPage() {
         />
         <Select
           allowClear
-          placeholder="状态"
-          style={{ width: isMobile ? 'calc(50% - 4px)' : 120 }}
+          placeholder="状态" 
+          style={{ width: isMobile ? 'calc(120% - 4px)' : 120 }}
           value={status}
           onChange={v => {
             setStatus(v);

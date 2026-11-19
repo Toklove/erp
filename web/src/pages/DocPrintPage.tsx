@@ -87,7 +87,8 @@ export default function DocPrintPage() {
       </div>
 
       <div className="print-sheet">
-        <div className="print-title">
+<div>
+          <div className="print-title">
           {COMPANY.name}
           {doc.docTypeName || '销售单'}
         </div>
@@ -169,34 +170,40 @@ export default function DocPrintPage() {
             ))}
           </tbody>
         </table>
+</div>
 
-        <div className="print-foot">
+        <div className="">
+          <div>
           <div className="print-foot-line">
-            <span>
+            <div>
+            <img src={qrcode} alt="Logo" width="100px" height="100px" /><img src={qrcode2} alt="Logo" width="100px" height="100px" />
+            </div>
+           <div>
+             <span>
               合计：<b>{toChineseAmount(pageTotal)}</b>
             </span>
+            <br></br>
             <span>
               页小计：<b>{fmtMoney(pageTotal)}</b>
             </span>
-          </div>
-          <div className="print-foot-line">
-            <span />
-            <span>
+            <br></br>
+               <span>
               欠款金额：<b>{fmtMoney(owe)}</b>
             </span>
+            <br></br>
+            <span>备注：{doc.remark || ''}</span>
+           </div>
           </div>
-          <div><img src={qrcode} alt="Logo" width="100px" height="100px" /><img src={qrcode2} alt="Logo" width="100px" height="100px" /></div>
+    
           <div className="print-foot-line" style={{ marginTop: 4 }}>
             <span>收款账户：{COMPANY.bankAccount || '＿＿＿＿＿＿＿＿＿＿＿＿'}</span>
             <span>地址：{COMPANY.address}</span>
-          </div>
-          <div className="print-foot-line">
-            <span>备注：{doc.remark || ''}</span>
           </div>
           <div className="print-sign">
             <span className="print-sign-item">制单人：{doc.creatorName || ''}</span>
             <span className="print-sign-item">经手人：{doc.handler || ''}</span>
             <span className="print-sign-item">客户签字：＿＿＿＿＿＿＿＿</span>
+          </div>
           </div>
         </div>
       </div>
