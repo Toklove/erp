@@ -9,18 +9,18 @@ trigger:
     - push
 
 steps:
-  - name: deploy
-    image: appleboy/drone-ssh
-    settings:
-      host:
-        from_secret: server_host
-      username:
-        from_secret: server_user
-      key:
-        from_secret: ssh_key
-      port: 22
-      script:
-        - cd /erp
-        - git pull origin main
-        - docker compose down
-        - docker compose up -d --build
+  - name: build
+    image: docker:latest
+    volumes:
+      - name: dockersock
+        path: /var/run/docker.sock
+    commands:
+      - cd /erp
+      - git pull origin main
+      - docker compose down
+      - docker compose up -d --build
+
+volumes:
+  - name: dockersock
+    host:
+      path: /var/run/docker.sock
