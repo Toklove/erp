@@ -1,0 +1,43 @@
+{
+  "pages": [
+    {
+      "path": "pages/doc/list",
+      "style": {
+        "navigationBarTitleText": "业务单据",
+        "enablePullDownRefresh": true,
+        "onReachBottomDistance": 80
+      }
+    },
+    {
+      "path": "pages/login/index",
+      "style": {
+        "navigationBarTitleText": "登录"
+      }
+    },
+    {
+      "path": "pages/doc/view",
+      "style": {
+        "navigationBarTitleText": "单据详情"
+      }
+    },
+    {
+      "path": "pages/doc/edit",
+      "style": {
+        "navigationBarTitleText": "单据编辑"
+      }
+    },
+    {
+      "path": "pages/doc/print",
+      "style": {
+        "navigationBarTitleText": "单据预览"
+      }
+    }
+  ],
+  "globalStyle": {
+    "navigationBarTextStyle": "black",
+    "navigationBarTitleText": "业务单据",
+    "navigationBarBackgroundColor": "#ffffff",
+    "backgroundColor": "#f4f5f7",
+    "backgroundTextStyle": "dark"
+  }
+}

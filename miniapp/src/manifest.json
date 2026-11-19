@@ -1,0 +1,29 @@
+{
+  "name": "业务单据",
+  "appid": "",
+  "description": "ERP 业务单据微信小程序端",
+  "versionName": "1.0.0",
+  "versionCode": "100",
+  "transformPx": false,
+  "vueVersion": "3",
+  "mp-weixin": {
+    "appid": "",
+    "setting": {
+      "urlCheck": false,
+      "es6": true,
+      "minified": true,
+      "postcss": true
+    },
+    "usingComponents": true,
+    "optimization": {
+      "subPackages": true
+    }
+  },
+  "h5": {
+    "title": "业务单据",
+    "router": {
+      "mode": "hash",
+      "base": "/"
+    }
+  }
+}
