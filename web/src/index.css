@@ -106,7 +106,8 @@ body {
     margin: 8px auto;
   }
 
-  /* 打印预览在小屏可横向滚动查看，不影响真实打印 */
+  /* 打印预览：纸张由 DocPrintPage 等比缩小到屏宽以内（见 .print-preview），
+     这里的横向滚动只是兜底——JS 缩放没生效时才允许左右拖动查看。 */
   .print-shell {
     overflow-x: auto;
     padding: 12px 8px;
@@ -130,10 +131,26 @@ body {
 
 .print-toolbar {
   width: 225mm;
+  max-width: 100%;
+  box-sizing: border-box;
   margin: 0 auto 16px;
   display: flex;
   justify-content: flex-end;
   gap: 8px;
+}
+
+/* 打印预览的缩放容器：
+   .print-sheet 是固定的 225mm 宽，屏幕放不下时由 DocPrintPage 用
+   transform: scale() 整体缩小。transform 不改变布局，所以缩放时要由 JS
+   补上容器高度（内联 height）；.is-scaled 时把没缩放的 225mm 布局盒裁掉，
+   否则它仍会撑出横向滚动条。 */
+.print-preview {
+  position: relative;
+  width: 100%;
+}
+
+.print-preview.is-scaled {
+  overflow: hidden;
 }
 
 .print-sheet {
@@ -283,6 +300,17 @@ body {
     background: #fff;
     padding: 0;
     min-height: auto;
+    overflow: visible !important;
+  }
+
+  /* 手机上点「打印」时 @media print 和 max-width:768px 会同时命中，
+     这里必须把预览用的缩放全部复位，否则打印出来是缩小的单据、只占纸面一角。
+     内联样式优先级高于普通声明，所以要用 !important 盖掉。 */
+  .print-preview {
+    position: static;
+    width: auto;
+    height: auto !important;
+    overflow: visible !important;
   }
 
   .print-sheet {
@@ -292,6 +320,8 @@ body {
     box-shadow: none;
     padding: 0;
     display: flex;
+    position: static !important;
+    transform: none !important;
   }
 
   @page {
