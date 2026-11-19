@@ -285,6 +285,19 @@ body {
   white-space: nowrap;
 }
 
+/* 导出 PNG 用的离屏舞台：
+   把纸张的一份未缩放副本丢到视口外，既不影响预览布局也不会闪一下。
+   不能用 display:none / visibility:hidden / opacity:0 —— html2canvas
+   需要元素真实参与排版（量尺寸）且完全不透明，才会画出正确的结果。 */
+.png-export-stage {
+  position: fixed;
+  top: 0;
+  left: -100000px;
+  z-index: -1;
+  pointer-events: none;
+  background: #fff;
+}
+
 @media print {
   .print-toolbar {
     display: none !important;

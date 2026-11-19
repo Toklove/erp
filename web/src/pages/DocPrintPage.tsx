@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { Button, message, Space, Spin } from 'antd';
-import { PrinterOutlined, CloseOutlined } from '@ant-design/icons';
+import { PrinterOutlined, CloseOutlined, DownloadOutlined } from '@ant-design/icons';
 import { useParams } from 'react-router-dom';
 import { docApi, type DocLine } from '../api/doc';
 import { COMPANY } from '../config/company';
 import { fmtMoney, toChineseAmount } from '../utils/cn-money';
+import { exportElementToPng, pngFileName } from '../utils/export-png';
 import qrcode from "../assets/qr.png";
 import qrcode2 from "../assets/qr2.png";
 
@@ -23,6 +24,8 @@ export default function DocPrintPage() {
   const [doc, setDoc] = useState<Record<string, any> | null>(null);
   const [loading, setLoading] = useState(true);
   const [printed, setPrinted] = useState(false);
+  /** 正在把单据渲染成 PNG（生成期间按钮转圈、防重复点击） */
+  const [exporting, setExporting] = useState(false);
 
   const shellRef = useRef<HTMLDivElement>(null);
   const sheetRef = useRef<HTMLDivElement>(null);
@@ -110,6 +113,22 @@ export default function DocPrintPage() {
     window.setTimeout(() => window.print(), 120);
   };
 
+  /** 把整张单据（含二维码、签字栏）渲染成 PNG 下载 */
+  const doDownloadPng = async () => {
+    const sheet = sheetRef.current;
+    if (!sheet) return;
+    setExporting(true);
+    try {
+      const name = pngFileName(doc?.docTypeName || '单据', doc?.docNo);
+      const result = await exportElementToPng(sheet, name);
+      message.success(`已保存 ${result.fileName}（${result.width}×${result.height}）`);
+    } catch (e) {
+      message.error(`导出 PNG 失败：${(e as Error).message}`);
+    } finally {
+      setExporting(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="print-shell" style={{ display: 'flex', justifyContent: 'center', paddingTop: 120 }}>
@@ -138,10 +157,13 @@ export default function DocPrintPage() {
   return (
     <div className="print-shell" ref={shellRef}>
       <div className="print-toolbar">
-        <Space>
+        <Space wrap>
           {printed && <span style={{ color: '#999', fontSize: 12 }}>已计入打印次数</span>}
           <Button icon={<CloseOutlined />} onClick={() => window.close()}>
             关闭
+          </Button>
+          <Button icon={<DownloadOutlined />} loading={exporting} onClick={doDownloadPng}>
+            下载 PNG
           </Button>
           <Button type="primary" icon={<PrinterOutlined />} onClick={doPrint}>
             打印

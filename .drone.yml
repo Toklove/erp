@@ -9,12 +9,15 @@ trigger:
     - push
 
 steps:
-  - name: build
+  - name: deploy
     image: docker:latest
     volumes:
       - name: dockersock
         path: /var/run/docker.sock
+      - name: app
+        path: /erp
     commands:
+      - apk add --no-cache git
       - cd /erp
       - git pull origin main
       - docker compose down
@@ -24,3 +27,6 @@ volumes:
   - name: dockersock
     host:
       path: /var/run/docker.sock
+  - name: app
+    host:
+      path: /root/erp

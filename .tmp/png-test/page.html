@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <title>png export harness</title>
+    <link rel="stylesheet" href="./index.css" />
+    <style>
+      /* 只影响 harness 页面本身，不影响被截的 .print-sheet */
+      #report {
+        font: 13px/1.6 Consolas, monospace;
+        background: #111;
+        color: #0f0;
+        padding: 8px;
+        margin: 0;
+        white-space: pre-wrap;
+      }
+      #out { display: block; margin: 0; width: 1250px; height: auto; background: #333; }
+      .harness-note { font: 12px/1.5 sans-serif; color: #555; padding: 6px 8px; }
+    </style>
+  </head>
+  <body>
+    <pre id="report">running…</pre>
+
+    <!-- 被导出元素：结构与 DocPrintPage 的 .print-sheet 一致 -->
+    <div class="print-shell">
+      <div class="print-toolbar"><button>关闭</button><button>下载 PNG</button><button>打印</button></div>
+
+      <div class="print-preview">
+        <div class="print-sheet">
+          <div>
+            <div class="print-title">广西南宁安特商贸有限公司 销售单</div>
+            <div class="print-title-rule"></div>
+
+            <div class="print-meta">
+              <div class="print-meta-col">
+                <div class="print-meta-row"><span class="print-meta-label">发货仓库：</span><span class="print-meta-value">总仓</span></div>
+                <div class="print-meta-row"><span class="print-meta-label">客户名称：</span><span class="print-meta-value">南宁市青秀区某某五金经营部</span></div>
+                <div class="print-meta-row"><span class="print-meta-label">联系地址：</span><span class="print-meta-value">南宁市青秀区民族大道 128 号</span></div>
+              </div>
+              <div class="print-meta-col">
+                <div class="print-meta-row"><span class="print-meta-label">录单日期：</span><span class="print-meta-value">2026-11-19</span></div>
+                <div class="print-meta-row"><span class="print-meta-label">单据编号：</span><span class="print-meta-value">XS20261119001</span></div>
+                <div class="print-meta-row"><span class="print-meta-label">联系电话：</span><span class="print-meta-value">13800138000</span></div>
+                <div class="print-meta-row"><span class="print-meta-label">摘　　要：</span><span class="print-meta-value">现款现货</span></div>
+              </div>
+            </div>
+
+            <table class="print-table">
+              <colgroup>
+                <col style="width: 7%" /><col style="width: 25%" /><col style="width: 13%" /><col style="width: 9%" />
+                <col style="width: 7%" /><col style="width: 9%" /><col style="width: 10%" /><col style="width: 11%" /><col style="width: 9%" />
+              </colgroup>
+              <thead>
+                <tr>
+                  <th>行号</th><th>存货名称</th><th>规格</th><th>颜色</th><th>单位</th>
+                  <th>数量</th><th>单价</th><th>金额</th><th>备注</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td class="center">1</td><td>不锈钢内六角螺栓</td><td>M8×40</td><td>本色</td><td class="center">个</td><td class="num">200.00</td><td class="num">0.85</td><td class="num">170.00</td><td></td></tr>
+                <tr><td class="center">2</td><td>镀锌平垫圈</td><td>M8</td><td>银白</td><td class="center">个</td><td class="num">500.00</td><td class="num">0.08</td><td class="num">40.00</td><td>促销</td></tr>
+                <tr><td class="center">3</td><td>PPR 热水管</td><td>DN25×4m</td><td>白色</td><td class="center">根</td><td class="num">30.00</td><td class="num">28.50</td><td class="num">855.00</td><td></td></tr>
+                <tr><td class="center">4</td><td>铜球阀</td><td>DN25</td><td>黄铜</td><td class="center">个</td><td class="num">15.00</td><td class="num">32.00</td><td class="num">480.00</td><td></td></tr>
+                <tr><td class="center">5</td><td>生料带</td><td>20mm×15m</td><td>白色</td><td class="center">卷</td><td class="num">50.00</td><td class="num">2.30</td><td class="num">115.00</td><td></td></tr>
+                <tr><td class="center">6</td><td>PVC 弯头</td><td>DN50</td><td>灰色</td><td class="center">个</td><td class="num">40.00</td><td class="num">3.60</td><td class="num">144.00</td><td></td></tr>
+                <tr><td class="center">7</td><td>不锈钢焊条</td><td>A102 2.5mm</td><td>银色</td><td class="center">公斤</td><td class="num">10.00</td><td class="num">46.00</td><td class="num">460.00</td><td></td></tr>
+                <tr><td class="center">8</td><td>劳保手套</td><td>均码</td><td>白色</td><td class="center">双</td><td class="num">100.00</td><td class="num">3.20</td><td class="num">320.00</td><td>赠品 2 双</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div>
+            <div>
+              <div class="print-foot-line">
+                <div>
+                  <img data-qr="1" width="100" height="100" alt="qr1" /><img data-qr="2" width="100" height="100" alt="qr2" />
+                </div>
+                <div>
+                  <span>合计：<b>贰仟壹佰贰拾肆元整</b></span><br />
+                  <span>页小计：<b>2124.00</b></span><br />
+                  <span>欠款金额：<b>0.00</b></span><br />
+                  <span>备注：</span>
+                </div>
+              </div>
+
+              <div class="print-foot-line" style="margin-top: 4px">
+                <span>收款账户：6222 0000 0000 0000</span>
+                <span>地址：南宁市</span>
+              </div>
+              <div class="print-sign">
+                <span class="print-sign-item">制单人：admin</span>
+                <span class="print-sign-item">经手人：李四</span>
+                <span class="print-sign-item">客户签字：＿＿＿＿＿＿＿＿</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <hr />
+    <div class="harness-note">以下为导出结果画布（1:1 像素，未缩放）：</div>
+    <img id="out" />
+
+    <script type="module">
+      import html2canvas from './h2c.js';
+
+      // ---- 以下逻辑与 web/src/utils/export-png.ts 保持一致 ----
+      const EXPORT_SCALE = 3;
+      const MAX_EXPORT_SIDE = 6000;
+
+      function waitForImages(root) {
+        const pending = Array.from(root.querySelectorAll('img')).map((img) =>
+          img.complete && img.naturalWidth > 0
+            ? Promise.resolve()
+            : new Promise((resolve) => {
+                img.addEventListener('load', () => resolve(), { once: true });
+                img.addEventListener('error', () => resolve(), { once: true });
+              }),
+        );
+        return Promise.all(pending).then(() => undefined);
+      }
+
+      function canvasToBlob(canvas) {
+        return new Promise((resolve, reject) => {
+          canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error('canvas 转 blob 返回空'))), 'image/png');
+        });
+      }
+
+      async function exportElementToPng(source, fileName, options = {}) {
+        const stage = document.createElement('div');
+        stage.className = 'png-export-stage';
+        const clone = source.cloneNode(true);
+        clone.removeAttribute('style');
+        stage.appendChild(clone);
+        document.body.appendChild(stage);
+        try {
+          await document.fonts?.ready;
+          await waitForImages(clone);
+
+          const width = Math.ceil(clone.offsetWidth);
+          const height = Math.ceil(clone.offsetHeight);
+          if (width <= 0 || height <= 0) throw new Error('单据内容为空，无法导出');
+
+          const requested = options.scale ?? EXPORT_SCALE;
+          const scale = Math.min(requested, Math.max(1, MAX_EXPORT_SIDE / Math.max(width, height)));
+
+          const canvas = await html2canvas(clone, {
+            scale,
+            backgroundColor: options.backgroundColor ?? '#ffffff',
+            useCORS: true,
+            logging: false,
+            windowWidth: Math.max(width, 1024),
+            windowHeight: Math.max(height, 768),
+          });
+
+          const blob = await canvasToBlob(canvas);
+          return { width: canvas.width, height: canvas.height, size: blob.size, canvas, blob, fileName };
+        } finally {
+          stage.remove();
+        }
+      }
+      // ---- 逻辑结束 ----
+
+      // 二维码用 data: URI，避免 file:// 下图片污染 canvas（真实环境是同源，不会污染）
+      const qrSvg =
+        '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100">' +
+        '<rect width="100" height="100" fill="#fff"/>' +
+        '<path d="M8 8h26v26H8z M66 8h26v26H66z M8 66h26v26H8z" fill="#000"/>' +
+        '<path d="M14 14h14v14H14z M72 14h14v14H72z M14 72h14v14H14z" fill="#fff"/>' +
+        '<path d="M40 12h4v4h-4z M46 20h4v4h-4z M52 28h4v4h-4z M40 36h4v4h-4z M48 44h4v4h-4z M56 52h4v4h-4z M64 60h4v4h-4z M72 76h4v4h-4z M40 62h4v4h-4z M48 70h4v4h-4z M56 78h4v4h-4z M64 86h4v4h-4z M76 88h6v6h-6z M88 62h6v6h-6z" fill="#000"/>' +
+        '</svg>';
+      const qrUri = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(qrSvg)));
+      document.querySelectorAll('img[data-qr]').forEach((img) => (img.src = qrUri));
+
+      const reportEl = document.getElementById('report');
+      const outEl = document.getElementById('out');
+
+      const json = (o) => JSON.stringify(o, null, 2);
+
+      (async () => {
+        try {
+          const sheet = document.querySelector('.print-sheet');
+          const t0 = performance.now();
+          const result = await exportElementToPng(sheet, '销售单-XS20261119001.png');
+          const ms = Math.round(performance.now() - t0);
+
+          // 把导出结果画布原样贴出来，供截图肉眼比对
+          const url = URL.createObjectURL(result.blob);
+          outEl.src = url;
+          await new Promise((r) => {
+            outEl.onload = r;
+            outEl.onerror = r;
+          });
+
+          const expectRatio = sheet.offsetHeight / sheet.offsetWidth;
+          window.__exportedCanvas = result.canvas;
+          window.__exportedDataUrl = result.canvas.toDataURL('image/png');
+          const lines = {
+            ok: true,
+            ms,
+            'sheet css px': `${sheet.offsetWidth}x${sheet.offsetHeight}`,
+            'canvas px': `${result.width}x${result.height}`,
+            'canvas / sheet': (result.width / sheet.offsetWidth).toFixed(3),
+            'blob bytes': result.size,
+            'aspect match': Math.abs(result.height / result.width - expectRatio) < 0.02,
+            'stage cleaned up': !document.querySelector('.png-export-stage'),
+            'toolbar captured?': false,
+          };
+          reportEl.textContent = json(lines);
+          document.title = 'PNG_OK';
+        } catch (e) {
+          reportEl.textContent = json({ ok: false, error: String(e && e.stack ? e.stack : e) });
+          document.title = 'PNG_FAIL';
+        }
+      })();
+    </script>
+  </body>
+</html>
