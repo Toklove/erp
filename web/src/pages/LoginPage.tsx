@@ -17,7 +17,7 @@ export default function LoginPage() {
       setToken(data.token);
       setUser(data.user);
       message.success('登录成功');
-      navigate('/md/items', { replace: true });
+      navigate('/doc', { replace: true });
     } catch (e) {
       message.error((e as Error).message);
     } finally {
