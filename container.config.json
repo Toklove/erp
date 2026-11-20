@@ -1,0 +1,21 @@
+{
+  "containerPort": 8080,
+  "dockerfilePath": "Dockerfile",
+  "buildDir": "",
+  "cpu": 0.5,
+  "mem": 1,
+  "minNum": 0,
+  "maxNum": 4,
+  "policyType": "cpu",
+  "policyThreshold": 60,
+  "customLogs": "",
+  "initialDelaySeconds": 10,
+  "envParams": {
+    "NODE_ENV": "production",
+    "TZ": "Asia/Shanghai",
+    "DEPLOY_MODE": "cloud",
+    "DB_POOL": "6",
+    "WX_BIND_TTL_MIN": "10",
+    "STATIC_DISABLE": "0"
+  }
+}

@@ -21,6 +21,20 @@ export class ErrorMiddleware implements IMiddleware<Context, NextFunction> {
           ctx.body = { success: false, code: err.code, message: err.message };
           return;
         }
+        // 框架抛出的 4xx（路由 404、方法不允许、参数校验等）不要当成 500
+        const status = Number(err?.status || err?.statusCode) || 0;
+        if (status >= 400 && status < 500) {
+          ctx.status = status;
+          ctx.body = {
+            success: false,
+            code: status === 404 ? 'NOT_FOUND' : 'BAD_REQUEST',
+            message:
+              status === 404
+                ? '请求的资源不存在'
+                : String(err?.message || '请求参数有误').slice(0, 200),
+          };
+          return;
+        }
         ctx.logger.error('[unhandled] %s\n%s', err?.message, err?.stack);
         ctx.status = 500;
         ctx.body = {

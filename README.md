@@ -28,6 +28,19 @@ erp/
 │  ├─ src/layouts/          基础布局（侧边栏 / 抽屉 + 标题映射）
 │  ├─ src/utils/            cn-money.ts（人民币大写 / 金额格式化）
 │  └─ src/pages/            登录 / 业务单据(列表·编辑·详情·打印) / 物料档案 / 管家婆导入
+├─ miniapp/                 uni-app（Vue3 + Vite）微信小程序端，只做业务单据
+│  ├─ src/api/              请求封装（uni.request / 云托管 callContainer 双通道）
+│  ├─ src/components/       hint-input（历史值自动补全，easycom）
+│  ├─ src/pages/            登录 / 单据列表·详情·编辑·打印
+│  └─ src/utils/            format.ts（人民币大写 / 状态映射）
+├─ docker/                  容器化文件
+│  ├─ server.Dockerfile     后端镜像（多阶段构建）
+│  ├─ web.Dockerfile        前端镜像（nginx）
+│  ├─ nginx.conf            SPA 回落 + /api 反代
+│  └─ mysql/                初始化脚本 01-schema → 05-wx-login（+ init/ 数据快照）
+├─ Dockerfile               ★ 微信云托管单容器镜像（静态页 + API 同源）
+├─ container.config.json    ★ 微信云托管部署参数（端口 / 规格 / 缩容到 0）
+├─ docker-compose.yml       自有服务器一键部署（MySQL + server + web）
 ├─ tools/etl/               管家婆迁移（M4，占位）
 └─ ../db/
    ├─ schema.sql            建表脚本（20 张表）
@@ -77,11 +90,142 @@ DISABLE_DB=1 npm run dev:server
 
 此时只加载路由与鉴权，不连数据库，可用于前端联调。
 
+## 部署
+
+三种形态按场景选：
+
+| 场景 | 用什么 | 入口 |
+|---|---|---|
+| 自有服务器 / 内网 | `docker compose`（MySQL + server + nginx） | `http://<服务器IP>:8989` |
+| 微信云托管（Serverless） | 根目录 `Dockerfile` + `container.config.json` | 云托管分配的公网域名 |
+| 本地开发 | `npm run dev:server` + `npm run dev:web` | `http://localhost:5173` |
+
+配置全部走环境变量：云托管注入的 `MYSQL_ADDRESS`（形如 `10.0.0.12:3306`）、`MYSQL_USERNAME`、`MYSQL_PASSWORD`、`MYSQL_DATABASE`、`PORT` 优先，没有再回退到 `DB_HOST / DB_PORT / DB_USER / DB_PASS / DB_NAME / PORT`，所以同一份代码两种部署都不用改配置文件。
+
+### A. docker compose（自有服务器）
+
+```bash
+cp .env.example .env      # 按需改密码与端口
+docker compose up -d --build
+docker compose ps
+```
+
+`.env` 里只需要关心三项：
+
+```
+MYSQL_ROOT_PASSWORD=GXNNante2026   # MySQL root 密码，后端也用这个账号连库
+WEB_PORT=8989                      # 宿主机对外端口（容器内仍是 80）
+DB_NAME=erp
+```
+
+- 对外只暴露 `web`：nginx 托管 React 静态文件并把 `/api` 反代到 `server:7001`；`mysql` 与 `server` 都只在 `erp-net` 网络内，不映射宿主端口。
+- 数据在命名卷 `erp-mysql-data`；`docker compose down` 保留数据，只有 `down -v` 才会删。
+- **首次启动**（数据卷为空）MySQL 会按文件名顺序执行 `docker/mysql/init/` 里的脚本：先是 `erp-2026-11-19_011449-dump.sql` 数据快照，再是 `zz-wx-login.sql` 补上微信绑定字段。
+- **已有数据的库升级**不要再跑初始化目录，只跑增量：
+
+  ```bash
+  docker compose exec -T mysql sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" erp' < docker/mysql/05-wx-login.sql
+  ```
+
+- `.drone.yml` 已配置：push 到 `main` → 在宿主机 `/root/erp` 执行 `docker compose down && docker compose up -d --build`。
+
+### B. 微信云托管（Serverless）
+
+微信云托管是单端口、按请求计费、无流量可缩容到 0 的容器平台，因此这里不用 compose，而是**一个容器同时提供页面和接口**（后端自带静态文件中间件，见 `server/src/middleware/static.middleware.ts`）。
+
+1. **准备数据库**（云托管 MySQL 或外部 MySQL，二者都要能被容器访问）。把 `docker/mysql/` 下的脚本按顺序执行一遍：
+
+   ```bash
+   mysql -h <host> -u <user> -p <db> < docker/mysql/01-schema.sql
+   mysql -h <host> -u <user> -p <db> < docker/mysql/02-seed.sql
+   mysql -h <host> -u <user> -p <db> < docker/mysql/03-002-doc.sql
+   mysql -h <host> -u <user> -p <db> < docker/mysql/04-003-doc-line-docno.sql
+   mysql -h <host> -u <user> -p <db> < docker/mysql/05-wx-login.sql   # 幂等，老库只跑这个
+   ```
+
+   也可以在云托管「数据库 → SQL 执行」里直接粘贴文件内容执行。
+
+2. **新建服务**：云托管控制台 → 新建 → 上传代码（仓库根目录），`container.config.json` 已经给出端口 `8080`、`0.5` 核 / `1G`、最小 `0` 实例、最大 `4`、CPU 60% 扩容、健康检查 `/api/health`。
+3. **配环境变量**（服务设置 → 环境变量）：
+
+   | 变量 | 说明 |
+   |---|---|
+   | `MYSQL_ADDRESS` | `主机:端口`，云托管 MySQL 内网地址，如 `10.0.0.12:3306` |
+   | `MYSQL_USERNAME` / `MYSQL_PASSWORD` / `MYSQL_DATABASE` | 数据库账号与库名 |
+   | `JWT_SECRET` | 登录 token 签名，**必须改** |
+   | `WX_APPID` / `WX_SECRET` | 小程序 AppID / AppSecret（微信一键登录用） |
+   | `WX_BIND_TTL_MIN` | 绑定码有效期（分钟，默认 10） |
+   | `DB_POOL` | 连接池大小（默认 10，云托管小规格建议 6） |
+   | `CORS_ORIGINS` | 只有跨域调用 API 时才需要，逗号分隔；同源部署留空即可 |
+
+4. 部署完成后直接访问云托管域名：页面和 `/api` 同源，不需要再配 nginx 或域名 CORS。
+5. `minNum: 0` 意味着没有流量时实例数归零，冷启动约 3~8 秒；不能接受就改成 `1`（常驻但会产生费用）。
+
+部署自检：
+
+```bash
+curl https://<你的云托管域名>/api/health
+# {"success":true,"data":{"status":"UP","uptime":12,"db":{"ok":true,"mode":"typeorm"},
+#  "wx":{"appidConfigured":true,"secretConfigured":true}}}
+```
+
+`db.ok=false` 说明数据库连接参数不对；`wx.*Configured=false` 说明还没配微信 AppID/Secret（此时「微信一键登录」会返回未配置提示，账号密码登录不受影响）。
+
+## 微信绑定与一键登录
+
+后台管理员在小程序里点一下就能登录，靠的是一次性绑定码把「微信 openid」和「系统账号」绑定起来：
+
+1. **网页端生成绑定码**：登录网页端 → 右上角「绑定微信」→ 生成 6 位绑定码（10 分钟内有效，可复制，弹窗里带倒计时；生成后每 5 秒自动刷新绑定状态）。
+2. **小程序端绑定**：小程序登录页点「微信一键登录」→ `wx.login` 拿 code → 后端换 openid → 该 openid 还没绑定，界面出现 6 位码输入框 → 填入网页端的码 → 绑定成功并直接下发 JWT 进列表。
+3. **之后就是一键登录**：再进小程序点「微信一键登录」直接进列表，不再输密码。
+
+安全与边界：
+
+- 绑定码只存在服务端 `sys_wx_bind_code` 表，6 位、大写、去掉了 `0 O 1 I` 等易混字符；有效期默认 10 分钟，用过即作废（`status` 0 待用 → 1 已使用 / 2 已作废）。
+- 同一微信只能绑一个账号（`sys_user.wx_openid` 上有唯一索引 `uk_wx_openid`，未绑定的行存 `NULL`，不互相冲突）；同一账号也只能挂一个微信，换绑要先解绑。
+- 网页端「解绑微信」只是把 `wx_openid` 置空并作废未使用的绑定码，不影响账号密码登录。
+- 云托管部署时 openid 由平台注入的 `X-WX-OPENID` 头直接给出，不必再调 `code2Session`；自建服务器部署则用 `wxCode` 走微信接口换取。
+
+相关接口：
+
+```
+POST /api/auth/wx-login        { wxCode? }  → { bound:false, wxConfigured } | { bound:true, token, user }
+POST /api/auth/wx-bind         { bindCode, wxCode? } → { token, user }
+GET  /api/auth/wx-status       → { bound, nickname, boundAt, configured }
+POST /api/auth/wx-bind-code    → { code, expireAt, ttlMinutes }
+POST /api/auth/wx-unbind       → { bound:false }
+```
+
+`/api/auth/wx-login` 与 `/api/auth/wx-bind` 在鉴权白名单里（没登录才能登录），`wx-status` / `wx-bind-code` / `wx-unbind` 需要登录。
+
+## 小程序端（微信）
+
+`miniapp/` 是独立的 uni-app（Vue3 + Vite + TypeScript）项目，只做业务单据：列表（搜索 + 类型/状态/日期筛选 + 上拉加载）、详情、新建/编辑、审核/反审核、过账、作废、删除、打印预览与「记一次打印 / 分享单据」。
+
+```bash
+npm --prefix miniapp install --cache .tmp/npm-cache
+
+npm --prefix miniapp run dev:mp-weixin      # 开发：产物在 miniapp/dist/dev/mp-weixin，用微信开发者工具打开
+npm --prefix miniapp run build:mp-weixin    # 生产：miniapp/dist/build/mp-weixin
+npm --prefix miniapp run dev:h5             # 浏览器里跑，便于快速看页面
+npm --prefix miniapp run typecheck          # tsc --noEmit（.vue 模板靠构建检查）
+```
+
+两种连后端的方式，登录页会自动判断：
+
+- **云托管模式**：`VITE_CLOUD_ENV=prod-xxxx` 写进 `miniapp/.env.production`（或登录后在本地存储 `erp_cloud_env` 里写环境 ID），请求走 `wx.cloud.callContainer`，header 带 `X-WX-SERVICE`，AppID 与云托管同主体，天然免域名备案与 CORS。
+- **直连模式**：登录页填「服务器地址」（如 `https://erp.example.com`），请求走 `uni.request`；服务器必须在微信公众平台「request 合法域名」里备案，且后端要放开 CORS（`CORS_ORIGINS`）或与其同源部署。
+
+真机调试前记得在 `miniapp/src/manifest.json` 里填自己的 `appid`（现在留空，构建产物里是 `touristappid`，只能游客模式预览）。
+
 ## 已实现（可直接用）
 
 | 模块 | 内容 |
 |---|---|
 | 鉴权 | 账号密码登录（scrypt 哈希）、JWT 签发、全局鉴权中间件、401 统一响应 |
+| **微信一键登录** | 网页端生成 6 位一次性绑定码 → 小程序绑定 openid → 之后点一下进系统；同账号/同微信一对一，云托管靠 `X-WX-OPENID` 免 code2Session |
+| **Serverless 部署** | 根 `Dockerfile` + `container.config.json` 适配微信云托管（单端口、可缩容到 0），后端自带静态托管与 gzip |
+| **小程序端** | uni-app（Vue3 + TS）：单据列表/详情/编辑/审核/过账/作废/打印预览，支持云托管与直连两种通道 |
 | 统一异常 | `BizError` → 4xx 原样返回；其他 → 500 + 日志，不泄露堆栈 |
 | 物料档案 | 分页查询（编码/名称/条码模糊）、新增、编辑（编码不可改）、软删除 |
 | **管家婆导入** | 三张表（单据/单据详情/草稿）JSON 导入，按单据编号合并明细；物料/往来单位/单据类型缺失自动建档；先预览后执行；同名单据跳过或覆盖 |
@@ -98,8 +242,14 @@ DISABLE_DB=1 npm run dev:server
 
 ```
 GET  /api/ping
+GET  /api/health              就绪探针（含数据库检查，DB 不可用返回 503）
 POST /api/auth/login          { username, password }
 GET  /api/auth/me
+POST /api/auth/wx-login       微信一键登录（云托管读 X-WX-OPENID，自建读 wxCode）
+POST /api/auth/wx-bind        用 6 位绑定码把微信绑到账号上（成功后直接下发 token）
+GET  /api/auth/wx-status      当前账号的微信绑定状态
+POST /api/auth/wx-bind-code   生成 6 位一次性绑定码
+POST /api/auth/wx-unbind      解绑微信
 
 GET  /api/md/items/page       ?keyword=&page=&pageSize=
 POST /api/md/items/create
@@ -224,6 +374,13 @@ curl -X POST http://127.0.0.1:7001/api/import/preview \
 | **导入结果核对** | ✅ 按单号逐字段核对：表头单(0 明细/2200/陈万群/已审核/打印1)、明细补表头单(3 行/2080/单位名/明细冗余单号)、草稿(0/1200/黄春花/陈万群/销售部)、采购单(往来单位匹配/950/入库方向) |
 | **过账自动建档** | ✅ 明细只写存货名的单据（3@88=264）审核后过账成功，返回 `autoCreateItems` 1 个，过账后明细回写 `itemId`、单位「个」、状态已过账 |
 | **前端模块烟测** | ✅ 10 个页面/模块 + 6 条路由全部 200 且能编译（`scripts/verify-web.js`） |
+| **微信绑定迁移** | ✅ MySQL 8.0.28：`05-wx-login.sql` 重复执行无副作用；删掉 wx 列/索引/绑定码表后重跑能完整补齐（老库升级路径） |
+| **微信绑定闭环** | ✅ 19/19：生成码 → 未绑定登录 → 绑定 → 已绑定一键登录 → 复用码/错码/过期码/一账号一微信 全部被拒 → 解绑后回到未绑定 |
+| **云托管单端口托管** | ✅ 后端直接托管 `web/dist`：`/` 与 `/doc/edit/12` 回落 index.html、`/assets/*` 强缓存+`immutable`、gzip 1381KB→446KB、缺文件返回 JSON 404 |
+| **绑定界面链路** | ✅ 无头 Chrome 10/10：未登录跳登录页 → 登录 → 头部「绑定微信」→ 弹窗（未配置 WX_APPID 时给出提示）→ 生成绑定码 `3AXV78` → 用该码调 `wx-bind` 绑定成功 |
+| **就绪探针** | ✅ DB 正常 `/api/health` 200；停掉 MySQL 变 503 + `status=DEGRADED`；重启 MySQL 自动恢复 200（连接池重连） |
+| **小程序端构建** | ✅ `build:mp-weixin` 产物含「微信一键登录」块与 `wx.cloud.callContainer`；`build:h5` 条件编译把该块整段剔除 |
+| **未验证** | ⚠️ 容器镜像未在本机构建（Docker 引擎起不来）、未接真实微信 AppID 走 `code2Session` |
 
 复跑脚本（需后端已启动，默认 7001 端口）：
 
@@ -275,6 +432,10 @@ node scripts/import-gjp.js ../../db/samples/gjp-sample.json        # 正式导�
 8. **不要用 PowerShell 批量正则改含中文的源码**：`(Get-Content -Raw) -replace ... | Set-Content -Encoding UTF8` 会把 UTF-8 无 BOM 文件按 ANSI(936) 读出再写成乱码，还会吞掉行尾换行，产生成片的 `TS1128` 语法错误。改源码用编辑器/工具，实在被写坏了可以用 GBK 反向编码还原：`ReadAllText(UTF8)` → `GetEncoding(936).GetBytes()` → `WriteAllBytes`。
 9. **typeorm 1.x 的 `select` 只接受对象**：`select: ['id','code']` 会报 `TS2322 Type 'string[]' is not assignable to type 'FindOptionsSelect'`，必须写成 `select: { id: true, code: true }`。
 10. **`manager.query()` 的返回形状不统一**：写语句返回 `ResultSetHeader` 对象（取 `insertId`），查询返回行数组。`const [x] = await manager.query(...)` 对写语句会报 `is not iterable`。全部改 TypeORM 的 `save/insert/update/increment` 后这类坑就消失了。
+11. **静态托管的 404 别交给路由**：路由未命中在 Midway 里是抛 `NotFoundError`，早先的 error 中间件把所有非 `BizError` 都当 500，导致「缺个 js 文件」变成 500。现在 error 中间件先看 `err.status`，4xx 原样返回（`NOT_FOUND` / `BAD_REQUEST`），只有 5xx 才记日志。
+12. **云托管只有 80/8080 一个端口**：页面与 API 必须同源，所以后端要托管 `web/dist`（`WEB_DIST` 指目录、`STATIC_DISABLE=1` 关掉）。别在里面再起 nginx 进程，容器只允许一个主进程。
+13. **`/api/health` 的状态码是真探针**：DB 不可用时返回 503，`Dockerfile` 的 `HEALTHCHECK` 与云托管探针都靠它判断；`/api/ping` 只证明进程活着，别混用。
+14. **小程序真机需要自己的 AppID**：`miniapp/src/manifest.json` 里 `appid` 现在是空的，构建产物是 `touristappid`（游客模式）。另外云托管模式下 `VITE_CLOUD_ENV` 必须是云托管环境 ID，填错会报 `cloud.callContainer:fail`。
 
 ## 下一步（按优先级）
 

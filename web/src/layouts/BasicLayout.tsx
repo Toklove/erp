@@ -15,10 +15,12 @@ import {
   LogoutOutlined,
   MenuOutlined,
   UserOutlined,
+  WechatOutlined,
 } from '@ant-design/icons';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { clearAuth, getUser } from '../api/client';
 import { useIsMobile } from '../hooks/useIsMobile';
+import WxBindModal from '../components/WxBindModal';
 
 const { Header, Sider, Content } = Layout;
 
@@ -52,6 +54,7 @@ export default function BasicLayout() {
   const location = useLocation();
   const isMobile = useIsMobile();
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [wxOpen, setWxOpen] = useState(false);
   const user = getUser<{ username: string; realName?: string }>();
 
   const items = useMemo(() => MENU_ITEMS, []);
@@ -109,6 +112,13 @@ export default function BasicLayout() {
               />
             )}
             <Tag icon={<UserOutlined />}>{user?.realName || user?.username || '未登录'}</Tag>
+            <Button
+              type="text"
+              icon={<WechatOutlined style={{ color: '#07c160' }} />}
+              onClick={() => setWxOpen(true)}
+            >
+              {isMobile ? '' : '绑定微信'}
+            </Button>
             <Button type="text" icon={<LogoutOutlined />} onClick={onLogout}>
               {isMobile ? '' : '退出'}
             </Button>
@@ -121,6 +131,8 @@ export default function BasicLayout() {
           <Outlet />
         </Content>
       </Layout>
+
+      <WxBindModal open={wxOpen} onClose={() => setWxOpen(false)} />
     </Layout>
   );
 }

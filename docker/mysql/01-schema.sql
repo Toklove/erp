@@ -303,11 +303,30 @@ CREATE TABLE sys_user (
   phone         VARCHAR(32)  NOT NULL DEFAULT '',
   status        TINYINT      NOT NULL DEFAULT 1,
   last_login_at DATETIME     NULL,
+  wx_openid     VARCHAR(64)  NULL DEFAULT NULL COMMENT '微信 openid（唯一，未绑定为 NULL）',
+  wx_unionid    VARCHAR(64)  NOT NULL DEFAULT '' COMMENT '微信 unionid',
+  wx_nickname   VARCHAR(64)  NOT NULL DEFAULT '' COMMENT '微信昵称',
+  wx_bound_at   DATETIME     NULL COMMENT '绑定微信时间',
   created_at    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
-  UNIQUE KEY uk_username (username)
+  UNIQUE KEY uk_username (username),
+  UNIQUE KEY uk_wx_openid (wx_openid)
 ) ENGINE=InnoDB COMMENT='用户';
+
+CREATE TABLE sys_wx_bind_code (
+  id          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  code        CHAR(6)     NOT NULL COMMENT '6 位绑定码（大写，去易混字符）',
+  user_id     BIGINT UNSIGNED NOT NULL COMMENT '绑定到哪个系统用户',
+  status      TINYINT     NOT NULL DEFAULT 0 COMMENT '0待用 1已使用 2已作废',
+  expire_at   DATETIME    NOT NULL,
+  used_at     DATETIME    NULL,
+  used_openid VARCHAR(64) NOT NULL DEFAULT '',
+  created_at  DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uk_code (code),
+  KEY idx_user (user_id, status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='微信绑定码（一次性，10 分钟有效）';
 
 CREATE TABLE sys_role (
   id         BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,

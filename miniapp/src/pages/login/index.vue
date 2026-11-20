@@ -6,6 +6,47 @@
       <view class="login__sub">仓库 ERP · 微信小程序端</view>
     </view>
 
+    <!-- 微信一键登录：只有小程序里有意义，H5 构建时整块被去掉 -->
+    <!-- #ifdef MP-WEIXIN -->
+    <view class="card login__wx">
+      <view class="login__wx-head">
+        <text class="login__wx-title">微信一键登录</text>
+        <text v-if="cloudMode" class="login__wx-tag">云托管</text>
+      </view>
+      <view class="muted login__wx-hint">
+        {{ cloudMode ? '已接入微信云托管，微信身份由平台自动透传。' : '首次使用需要先在网页端「绑定微信」。' }}
+      </view>
+
+      <button class="btn login__wx-btn" :loading="wxLoading" @click="onWxLogin">
+        微信一键登录
+      </button>
+
+      <view v-if="bindMode" class="login__bind">
+        <view class="label login__gap">绑定码</view>
+        <input
+          v-model="bindCode"
+          class="login__input login__code"
+          placeholder="6 位绑定码"
+          :maxlength="6"
+          confirm-type="done"
+          @confirm="onWxBind"
+        />
+        <view class="muted login__hint">
+          绑定码在电脑端网页右上角「绑定微信」里生成，10 分钟内有效、只能用一次。
+        </view>
+        <view class="btn btn--primary login__submit" @click="onWxBind">绑定并登录</view>
+      </view>
+
+      <view v-if="wxConfigured === false" class="muted login__hint login__wx-warn">
+        服务端未配置 WX_APPID / WX_SECRET：云托管内网调用仍可一键登录，直连方式暂不可用。
+      </view>
+    </view>
+
+    <view class="login__divider">
+      <text>或使用账号密码登录</text>
+    </view>
+    <!-- #endif -->
+
     <view class="card login__form">
       <view class="label">用户名</view>
       <input
@@ -27,18 +68,21 @@
         @confirm="submit"
       />
 
-      <view class="label login__gap">服务器地址</view>
-      <input
-        v-model="baseUrl"
-        class="login__input"
-        :placeholder="basePlaceholder"
-        :maxlength="120"
-        confirm-type="done"
-        @confirm="submit"
-      />
-      <view class="muted login__hint">
-        {{ baseHint }}
-      </view>
+      <!-- 云托管模式下不需要手填服务器地址 -->
+      <block v-if="!cloudMode">
+        <view class="label login__gap">服务器地址</view>
+        <input
+          v-model="baseUrl"
+          class="login__input"
+          :placeholder="basePlaceholder"
+          :maxlength="120"
+          confirm-type="done"
+          @confirm="submit"
+        />
+        <view class="muted login__hint">
+          {{ baseHint }}
+        </view>
+      </block>
 
       <view
         class="btn btn--primary login__submit"
@@ -56,13 +100,27 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { onLoad } from '@dcloudio/uni-app';
-import { login } from '../../api/auth';
-import { getBaseUrl, getToken, setBaseUrl, setToken, setUser } from '../../api/client';
+import { login, wxBind, wxLogin, type LoginResp } from '../../api/auth';
+import {
+  getBaseUrl,
+  getToken,
+  isCloudMode,
+  setBaseUrl,
+  setToken,
+  setUser,
+} from '../../api/client';
 
 const username = ref('');
 const password = ref('');
 const baseUrl = ref(getBaseUrl());
 const submitting = ref(false);
+
+/** 微信登录相关 */
+const cloudMode = ref(isCloudMode());
+const wxLoading = ref(false);
+const bindMode = ref(false);
+const bindCode = ref('');
+const wxConfigured = ref<boolean | null>(null);
 
 /** 小程序端必须填完整域名；H5 与 Web 部署在同域名时可留空（走同源 /api） */
 let basePlaceholder = '如 https://erp.example.com';
@@ -79,6 +137,86 @@ onLoad(() => {
     uni.reLaunch({ url: '/pages/doc/list' });
   }
 });
+
+function enter(res: LoginResp) {
+  setToken(res.token);
+  setUser(res.user);
+  uni.showToast({ title: '登录成功', icon: 'success' });
+  setTimeout(() => {
+    uni.reLaunch({ url: '/pages/doc/list' });
+  }, 300);
+}
+
+/** wx.login 拿一次性 code：云托管模式下后端用不到，直连时才需要 */
+function getWxCode(): Promise<string | undefined> {
+  return new Promise((resolve) => {
+    // #ifdef MP-WEIXIN
+    uni.login({
+      provider: 'weixin',
+      success: (res) => resolve(res.code || undefined),
+      fail: () => resolve(undefined),
+    });
+    // #endif
+    // #ifndef MP-WEIXIN
+    resolve(undefined);
+    // #endif
+  });
+}
+
+async function onWxLogin() {
+  if (wxLoading.value) return;
+  wxLoading.value = true;
+  bindMode.value = false;
+  try {
+    setBaseUrl(baseUrl.value);
+    const code = cloudMode.value ? undefined : await getWxCode();
+    if (!cloudMode.value && !code) {
+      throw new Error('未能获取微信登录凭证，请重试');
+    }
+    const res = await wxLogin(code);
+    if (res.bound) {
+      enter(res);
+      return;
+    }
+    // 未绑定：引导输入后台生成的绑定码
+    wxConfigured.value = res.wxConfigured;
+    bindMode.value = true;
+    uni.showToast({ title: '该微信还未绑定账号', icon: 'none' });
+  } catch (e) {
+    uni.showModal({
+      title: '微信登录失败',
+      content: (e as Error).message || '请稍后重试',
+      showCancel: false,
+    });
+  } finally {
+    wxLoading.value = false;
+  }
+}
+
+async function onWxBind() {
+  const code = bindCode.value.trim().toUpperCase();
+  if (code.length !== 6) {
+    uni.showToast({ title: '请输入 6 位绑定码', icon: 'none' });
+    return;
+  }
+  if (wxLoading.value) return;
+  wxLoading.value = true;
+  try {
+    const wxCode = cloudMode.value ? undefined : await getWxCode();
+    if (!cloudMode.value && !wxCode) {
+      throw new Error('未能获取微信登录凭证，请重试');
+    }
+    enter(await wxBind(code, wxCode));
+  } catch (e) {
+    uni.showModal({
+      title: '绑定失败',
+      content: (e as Error).message || '请检查绑定码是否有效',
+      showCancel: false,
+    });
+  } finally {
+    wxLoading.value = false;
+  }
+}
 
 async function submit() {
   if (submitting.value) return;
@@ -98,13 +236,7 @@ async function submit() {
 
   submitting.value = true;
   try {
-    const res = await login(name, password.value);
-    setToken(res.token);
-    setUser(res.user);
-    uni.showToast({ title: '登录成功', icon: 'success' });
-    setTimeout(() => {
-      uni.reLaunch({ url: '/pages/doc/list' });
-    }, 300);
+    enter(await login(name, password.value));
   } catch (e) {
     uni.showModal({
       title: '登录失败',
@@ -152,6 +284,69 @@ async function submit() {
   font-size: 24rpx;
   color: #8b949e;
   margin-top: 8rpx;
+}
+
+.login__wx {
+  padding: 28rpx 28rpx 32rpx;
+}
+
+.login__wx-head {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  margin-bottom: 8rpx;
+}
+
+.login__wx-title {
+  font-size: 32rpx;
+  font-weight: 600;
+}
+
+.login__wx-tag {
+  font-size: 20rpx;
+  color: #07c160;
+  border: 1rpx solid #07c160;
+  border-radius: 999rpx;
+  padding: 2rpx 12rpx;
+}
+
+.login__wx-hint {
+  font-size: 24rpx;
+  line-height: 1.5;
+}
+
+.login__wx-warn {
+  color: #d46b08;
+}
+
+.login__wx-btn {
+  margin-top: 24rpx;
+  background-color: #07c160;
+  color: #ffffff;
+  font-size: 30rpx;
+  height: 84rpx;
+  line-height: 84rpx;
+}
+
+.login__bind {
+  margin-top: 8rpx;
+  padding-top: 16rpx;
+  border-top: 1rpx dashed #e5e8eb;
+}
+
+.login__code {
+  letter-spacing: 8rpx;
+  font-family: Consolas, Menlo, monospace;
+  font-weight: 600;
+}
+
+.login__divider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #8b949e;
+  font-size: 22rpx;
+  margin: 8rpx 0 20rpx;
 }
 
 .login__form {

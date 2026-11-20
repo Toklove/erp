@@ -4,7 +4,14 @@ import { JwtService } from '@midwayjs/jwt';
 import { BizError } from '../common/biz-error';
 
 /** 无需登录即可访问的路径 */
-const WHITE_LIST = ['/api/ping', '/api/auth/login', '/api/health'];
+const WHITE_LIST = [
+  '/api/ping',
+  '/api/health',
+  '/api/auth/login',
+  // 未登录时也要能调：微信一键登录、用绑定码绑定
+  '/api/auth/wx-login',
+  '/api/auth/wx-bind',
+];
 
 export interface LoginUser {
   uid: number;

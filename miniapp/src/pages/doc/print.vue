@@ -1,176 +1,133 @@
 <template>
-  <view class="page">
-    <view v-if="loading" class="empty">
-      <view class="muted">正在加载…</view>
+  <view class="print-page">
+    <view v-if="loading" class="print-state">
+      <view class="print-state__text">正在生成单据图片…</view>
     </view>
 
-    <view v-else-if="!doc" class="empty">
-      <view class="empty__icon">🔍</view>
-      <view class="empty__text">单据不存在</view>
+    <view v-else-if="error" class="print-state">
+      <view class="print-state__text">{{ error }}</view>
+      <button class="btn btn--primary print-state__btn" @click="prepare">重试</button>
     </view>
 
     <block v-else>
-      <!-- 单据纸张 -->
-      <view class="sheet">
-        <view class="sheet__title">{{ COMPANY.name }}{{ doc.docTypeName || '销售单' }}</view>
-        <view class="sheet__rule" />
-
-        <view class="sheet__meta">
-          <view class="sheet__meta-col">
-            <view class="sheet__meta-row">
-              <text class="sheet__meta-label">发货仓库：</text>
-              <text class="sheet__meta-value">{{ doc.warehouseName || '' }}</text>
-            </view>
-            <view class="sheet__meta-row">
-              <text class="sheet__meta-label">客户名称：</text>
-              <text class="sheet__meta-value">{{ doc.partnerName || '' }}</text>
-            </view>
-            <view class="sheet__meta-row">
-              <text class="sheet__meta-label">联系地址：</text>
-              <text class="sheet__meta-value">{{ doc.contactAddress || '' }}</text>
-            </view>
-          </view>
-          <view class="sheet__meta-col">
-            <view class="sheet__meta-row">
-              <text class="sheet__meta-label">录单日期：</text>
-              <text class="sheet__meta-value">{{ doc.bizDate || '' }}</text>
-            </view>
-            <view class="sheet__meta-row">
-              <text class="sheet__meta-label">单据编号：</text>
-              <text class="sheet__meta-value">{{ doc.docNo || '' }}</text>
-            </view>
-            <view class="sheet__meta-row">
-              <text class="sheet__meta-label">联系电话：</text>
-              <text class="sheet__meta-value">{{ doc.contactPhone || '' }}</text>
-            </view>
-            <view class="sheet__meta-row">
-              <text class="sheet__meta-label">摘　　要：</text>
-              <text class="sheet__meta-value">{{ doc.summary || '' }}</text>
-            </view>
-          </view>
-        </view>
-
-        <!-- 明细表 -->
-        <view class="tbl">
-          <view class="tbl__row tbl__head">
-            <text class="tbl__cell tbl__c-no">行号</text>
-            <text class="tbl__cell tbl__c-name">存货名称</text>
-            <text class="tbl__cell tbl__c-unit">单位</text>
-            <text class="tbl__cell tbl__c-qty">数量</text>
-            <text class="tbl__cell tbl__c-price">单价</text>
-            <text class="tbl__cell tbl__c-amt">金额</text>
-          </view>
-
-          <view v-for="(line, index) in lines" :key="line.id || index" class="tbl__row">
-            <text class="tbl__cell tbl__c-no">{{ index + 1 }}</text>
-            <view class="tbl__c-name">
-              <text class="tbl__name">{{ line.itemName || '' }}</text>
-              <text v-if="line.itemSpec || line.itemColor" class="tbl__spec">
-                {{ [line.itemSpec, line.itemColor].filter(Boolean).join(' / ') }}
-              </text>
-              <text v-if="line.remark" class="tbl__spec">备注：{{ line.remark }}</text>
-            </view>
-            <text class="tbl__cell tbl__c-unit">{{ line.unitName || '' }}</text>
-            <text class="tbl__cell tbl__c-qty">{{ fmtQty(line.qty) }}</text>
-            <text class="tbl__cell tbl__c-price">{{ fmtMoney(line.price) }}</text>
-            <text class="tbl__cell tbl__c-amt">{{ fmtMoney(line.amount) }}</text>
-          </view>
-
-          <view v-if="!lines.length" class="tbl__empty muted">没有明细</view>
-        </view>
-
-        <!-- 合计 -->
-        <view class="sheet__foot">
-          <view class="sheet__foot-line">
-            <text>合计：<text class="sheet__strong">{{ toChineseAmount(doc.totalAmount) }}</text></text>
-          </view>
-          <view class="sheet__foot-line">
-            <text>合计金额：<text class="sheet__strong">¥{{ fmtMoney(doc.totalAmount) }}</text></text>
-          </view>
-          <view class="sheet__foot-line">
-            <text>已收金额：<text class="sheet__strong">¥{{ fmtMoney(doc.paidAmount) }}</text></text>
-          </view>
-          <view class="sheet__foot-line">
-            <text>欠款金额：<text class="sheet__strong">¥{{ fmtMoney(unpaid) }}</text></text>
-          </view>
-          <view class="sheet__foot-line">
-            <text>备注：{{ doc.remark || '' }}</text>
-          </view>
-          <view class="sheet__foot-line">
-            <text>收款账户：{{ COMPANY.bankAccount || '＿＿＿＿＿＿＿＿＿＿＿＿' }}</text>
-          </view>
-          <view class="sheet__foot-line">
-            <text>地址：{{ COMPANY.address }}</text>
-          </view>
-        </view>
-
-        <view class="sheet__sign">
-          <text class="sheet__sign-item">制单人：{{ doc.creatorName || '' }}</text>
-          <text class="sheet__sign-item">经手人：{{ doc.handler || '' }}</text>
-          <text class="sheet__sign-item">客户签字：＿＿＿＿＿</text>
-        </view>
-
-        <view class="sheet__print-count muted">本单据已打印 {{ doc.printCount ?? 0 }} 次</view>
-      </view>
-
-      <view class="tip muted">
-        小程序内为单据预览版式；如需纸质打印，请在电脑端 Web 打开同一单据打印。
+      <!-- 这张图就是最终打印的样子：和 Web 端打印页同一份版式（225mm 宽） -->
+      <image class="print-image" :src="imagePath" mode="widthFix" @click="zoomImage" />
+      <view class="print-tip">
+        <text class="print-tip__text">
+          与电脑端打印页同一版式，已按屏幕宽度等比缩小显示；点图片可放大查看。
+        </text>
       </view>
     </block>
 
-    <view v-if="doc" class="bottom-bar">
-      <view class="btn bottom-bar__btn" :class="{ 'btn--disabled': recording }" @click="recordPrint">
-        {{ recording ? '记录中…' : '记一次打印' }}
-      </view>
-      <button class="btn btn--primary bottom-bar__btn" open-type="share">分享单据</button>
+    <view v-if="!loading" class="bottom-bar">
+      <button class="btn bottom-bar__btn" open-type="share">分享单据</button>
+      <button class="btn btn--primary bottom-bar__btn" :disabled="!imagePath || busy" @click="saveImage">
+        {{ busy ? '处理中…' : '保存图片（打印）' }}
+      </button>
     </view>
+
+    <!-- 离屏画布：只用来把单据画成图片，用户看不到 -->
+    <!-- 小程序端用新版 2D 画布（真机可靠），H5 仍用旧版 canvas-id 接口 -->
+    <!-- #ifdef MP-WEIXIN -->
+    <canvas type="2d" id="print-canvas" class="print-canvas" :style="canvasStyle" />
+    <!-- #endif -->
+    <!-- #ifndef MP-WEIXIN -->
+    <canvas canvas-id="print-canvas" id="print-canvas" class="print-canvas" :style="canvasStyle" />
+    <!-- #endif -->
   </view>
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { nextTick, ref } from 'vue';
 import { onLoad, onShareAppMessage } from '@dcloudio/uni-app';
 import { ensureLogin } from '../../api/client';
-import { docApi, type DocHead, type DocLine } from '../../api/doc';
-import { COMPANY } from '../../config/company';
-import { fmtMoney, fmtQty, toChineseAmount } from '../../utils/format';
+import { docApi, type DocHead } from '../../api/doc';
+import { SHEET_WIDTH_PX, renderDocImage } from '../../utils/print-image';
+
+/**
+ * 画布尺寸：宽度按纸张 1.5 倍（约 135dpi）准备，高度取小程序 canvas 的安全上限。
+ * 明细特别多时会自动按画布高度降倍率，保证整张单据完整出图。
+ */
+const CANVAS_W = Math.round(SHEET_WIDTH_PX * 1.5);
+const CANVAS_H = 1365;
+const canvasStyle = `width:${CANVAS_W}px;height:${CANVAS_H}px;`;
 
 const doc = ref<DocHead | null>(null);
+const imagePath = ref('');
 const loading = ref(true);
-const recording = ref(false);
+const error = ref('');
+const busy = ref(false);
 let docId = 0;
 
-const lines = computed<DocLine[]>(() => doc.value?.lines || []);
-const unpaid = computed(() => Number(doc.value?.totalAmount || 0) - Number(doc.value?.paidAmount || 0));
-
-async function fetchDetail() {
+/** 取详情 → 画图 → 拿到临时文件路径 */
+async function prepare() {
+  if (!docId) {
+    loading.value = false;
+    error.value = '单据不存在';
+    return;
+  }
   loading.value = true;
+  error.value = '';
+  imagePath.value = '';
   try {
-    doc.value = await docApi.detail(docId);
+    if (!doc.value) doc.value = await docApi.detail(docId);
+    // 等 canvas 渲染出来再取上下文
+    await nextTick();
+    const res = await renderDocImage('print-canvas', doc.value, CANVAS_W, CANVAS_H);
+    imagePath.value = res.path;
   } catch (e) {
-    doc.value = null;
-    uni.showModal({
-      title: '读取失败',
-      content: (e as Error).message || '请稍后重试',
-      showCancel: false,
-    });
+    error.value = (e as Error).message || '生成单据图片失败';
   } finally {
     loading.value = false;
   }
 }
 
-/** 与 Web 端行为一致：点「打印」时累加打印次数 */
-async function recordPrint() {
-  if (recording.value || !docId) return;
-  recording.value = true;
+function zoomImage() {
+  if (!imagePath.value) return;
+  uni.previewImage({ urls: [imagePath.value], current: imagePath.value });
+}
+
+/** 「打印」= 记录打印次数 + 把这张图存下来（相册里的图就是打印用图） */
+async function saveImage() {
+  if (!imagePath.value || busy.value) return;
+  busy.value = true;
   try {
-    const res = await docApi.printed(docId);
-    if (doc.value) doc.value.printCount = res?.printCount ?? (Number(doc.value.printCount) || 0) + 1;
-    uni.showToast({ title: '已记录打印次数', icon: 'none' });
+    // 与 Web 端一致：点打印就累计一次打印次数，失败不打断保存
+    docApi.printed(docId).catch(() => undefined);
+
+    const name = `${doc.value?.docTypeName || '单据'}-${doc.value?.docNo || ''}.png`;
+
+    // #ifdef H5
+    const docEl = (globalThis as any).document;
+    if (docEl) {
+      const a = docEl.createElement('a');
+      a.href = imagePath.value;
+      a.download = name;
+      docEl.body.appendChild(a);
+      a.click();
+      docEl.body.removeChild(a);
+    }
+    uni.showToast({ title: '已下载图片', icon: 'none' });
+    // #endif
+
+    // #ifndef H5
+    await new Promise<void>((resolve, reject) => {
+      uni.saveImageToPhotosAlbum({
+        filePath: imagePath.value,
+        success: () => resolve(),
+        fail: (err: any) => reject(new Error(err?.errMsg || '保存到相册失败')),
+      });
+    });
+    uni.showToast({ title: '已保存到相册，可直接打印', icon: 'none' });
+    // #endif
   } catch (e) {
-    uni.showToast({ title: (e as Error).message || '记录失败', icon: 'none' });
+    uni.showModal({
+      title: '保存失败',
+      content: `${(e as Error).message || '请稍后重试'}\n如提示权限问题，请在系统设置里允许保存到相册。`,
+      showCancel: false,
+    });
   } finally {
-    recording.value = false;
+    busy.value = false;
   }
 }
 
@@ -182,228 +139,60 @@ onShareAppMessage(() => ({
 onLoad((query) => {
   if (!ensureLogin()) return;
   docId = Number((query as Record<string, string> | undefined)?.id || 0);
-  if (!docId) {
-    loading.value = false;
-    return;
-  }
-  void fetchDetail();
+  void prepare();
 });
 </script>
 
 <style scoped>
-.empty {
-  padding: 120rpx 40rpx;
+.print-page {
+  min-height: 100vh;
+  padding: 16rpx 0 190rpx;
+  background-color: #f0f2f5;
+  box-sizing: border-box;
+}
+
+.print-state {
+  padding: 200rpx 48rpx;
   text-align: center;
 }
 
-.empty__icon {
-  font-size: 72rpx;
-  color: #d0d7de;
-}
-
-.empty__text {
-  margin: 16rpx 0 8rpx;
-  font-size: 28rpx;
+.print-state__text {
+  font-size: 26rpx;
+  line-height: 1.6;
   color: #6b7280;
 }
 
-.sheet {
-  margin: 20rpx 24rpx 0;
-  padding: 32rpx 24rpx 28rpx;
+.print-state__btn {
+  margin-top: 36rpx;
+}
+
+/* 图片本身就是一整张纸，宽度铺满、高度按比例自适应 */
+.print-image {
+  display: block;
+  width: 100%;
   background-color: #ffffff;
-  border: 1rpx solid #dfe3e8;
-  border-radius: 6rpx;
-  box-shadow: 0 4rpx 20rpx rgba(15, 23, 42, 0.06);
+  box-shadow: 0 4rpx 18rpx rgba(15, 23, 42, 0.12);
 }
 
-.sheet__title {
-  text-align: center;
-  font-size: 32rpx;
-  font-weight: 700;
-  letter-spacing: 2rpx;
-  color: #1f2328;
+.print-tip {
+  padding: 18rpx 32rpx 0;
 }
 
-.sheet__rule {
-  height: 3rpx;
-  margin: 10rpx 0 18rpx;
-  background-color: #1f2328;
-}
-
-.sheet__meta {
-  display: flex;
-  flex-wrap: wrap;
-}
-
-.sheet__meta-col {
-  width: 50%;
-  box-sizing: border-box;
-}
-
-.sheet__meta-col:first-child {
-  padding-right: 12rpx;
-}
-
-.sheet__meta-row {
-  display: flex;
-  align-items: flex-start;
-  padding: 4rpx 0;
+.print-tip__text {
   font-size: 22rpx;
-  line-height: 1.5;
-}
-
-.sheet__meta-label {
-  color: #6b7280;
-  flex-shrink: 0;
-}
-
-.sheet__meta-value {
-  color: #1f2328;
-  flex: 1;
-  word-break: break-all;
-}
-
-.tbl {
-  margin-top: 16rpx;
-  border-top: 2rpx solid #1f2328;
-  border-left: 1rpx solid #1f2328;
-}
-
-.tbl__row {
-  display: flex;
-  align-items: stretch;
-  border-bottom: 1rpx solid #1f2328;
-}
-
-.tbl__head {
-  background-color: #f5f6f7;
-  font-weight: 600;
-}
-
-.tbl__cell {
-  padding: 8rpx 6rpx;
-  box-sizing: border-box;
-  border-right: 1rpx solid #1f2328;
-  font-size: 22rpx;
-  line-height: 1.45;
-  color: #1f2328;
-  word-break: break-all;
-}
-
-.tbl__head .tbl__cell {
-  text-align: center;
-  font-size: 22rpx;
-}
-
-.tbl__c-no {
-  width: 9%;
-  text-align: center;
-  flex-shrink: 0;
-}
-
-.tbl__c-name {
-  width: 33%;
-  flex-shrink: 0;
-  padding: 8rpx 6rpx;
-  box-sizing: border-box;
-  border-right: 1rpx solid #1f2328;
-}
-
-.tbl__c-unit {
-  width: 10%;
-  text-align: center;
-  flex-shrink: 0;
-}
-
-.tbl__c-qty {
-  width: 12%;
-  text-align: right;
-  flex-shrink: 0;
-}
-
-.tbl__c-price {
-  width: 15%;
-  text-align: right;
-  flex-shrink: 0;
-}
-
-.tbl__c-amt {
-  width: 21%;
-  text-align: right;
-  flex-shrink: 0;
-  border-right: 1rpx solid #1f2328;
-}
-
-.tbl__head .tbl__c-amt {
-  border-right: 1rpx solid #1f2328;
-}
-
-.tbl__name {
-  display: block;
-  font-size: 22rpx;
-  color: #1f2328;
-  line-height: 1.45;
-}
-
-.tbl__spec {
-  display: block;
-  font-size: 19rpx;
+  line-height: 1.6;
   color: #8b949e;
-  line-height: 1.4;
 }
 
-.tbl__empty {
-  padding: 24rpx 0;
-  text-align: center;
-  font-size: 22rpx;
-  border-right: 1rpx solid #1f2328;
-}
-
-.sheet__foot {
-  margin-top: 16rpx;
-}
-
-.sheet__foot-line {
-  padding: 3rpx 0;
-  font-size: 22rpx;
-  color: #1f2328;
-  line-height: 1.6;
-}
-
-.sheet__strong {
-  font-weight: 700;
-}
-
-.sheet__sign {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  margin-top: 22rpx;
-  padding-top: 12rpx;
-  border-top: 1rpx dashed #d0d7de;
-}
-
-.sheet__sign-item {
-  font-size: 22rpx;
-  color: #1f2328;
-  padding: 6rpx 0;
-}
-
-.sheet__print-count {
-  margin-top: 10rpx;
-  font-size: 20rpx;
-  text-align: right;
-}
-
-.tip {
-  padding: 20rpx 32rpx 0;
-  font-size: 22rpx;
-  line-height: 1.6;
-  text-align: center;
+/* 离屏画布：移到屏幕外，既不占位置也不会闪。
+   用 top 方向移出（比 left:-9999px + z-index:-1 更稳，微信真机照样绘制）。 */
+.print-canvas {
+  position: fixed;
+  top: -10000px;
+  left: 0;
 }
 
 .bottom-bar__btn {
   flex: 1;
-  /* margin: 0; */
 }
 </style>
